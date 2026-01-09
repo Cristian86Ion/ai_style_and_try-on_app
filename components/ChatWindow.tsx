@@ -8,13 +8,23 @@ interface Message {
   image?: string
   tips?: string
   alternativePalette?: string
+  // Interfața extinsă pentru a primi măsurătorile de la backend
+  measurements?: {
+    chest_circumference: number;
+    waist_circumference: number;
+    hip_circumference: number;
+    arm_length: number;
+    leg_length: number;
+    shoulder_hip_ratio: number;
+    bmi: number;
+  }
 }
 
 interface ChatWindowProps {
   theme?: string
   fontSize?: string
   messages: Message[]
-  onMessagesUpdate: (messages: Message[]) => void
+  onMessagesUpdate: (messages: Message[] | ((prev: Message[]) => Message[])) => void
   bodyType: string
   userName: string
   onOpenGuide?: () => void
@@ -51,14 +61,13 @@ export default function ChatWindow({
     setLoading(true)
     const userText = input.trim()
     const newUserMessage: Message = { from: "user", text: userText }
-    const updatedMessages = [...messages, newUserMessage]
 
-    onMessagesUpdate(updatedMessages)
+    // Salvăm mesajele actuale pentru a adăuga răspunsul ulterior
+    const currentMessages = [...messages, newUserMessage]
+    onMessagesUpdate(currentMessages)
     setInput("")
 
     try {
-      console.log("🔄 Sending request to backend...")
-
       const res = await fetch("http://127.0.0.1:8000/generate-outfit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,56 +78,24 @@ export default function ChatWindow({
         }),
       })
 
-      console.log("📥 Response status:", res.status)
-
-      if (!res.ok) {
-        let errorMessage = `Server error (${res.status})`
-        try {
-          const errorData = await res.json()
-          errorMessage = errorData?.detail?.message || errorData?.detail || errorMessage
-        } catch {
-          errorMessage = await res.text() || errorMessage
-        }
-        throw new Error(errorMessage)
-      }
+      if (!res.ok) throw new Error(`Server error (${res.status})`)
 
       const data = await res.json()
-      console.log("✅ Response received:", data)
 
-      onMessagesUpdate([...updatedMessages, {
+      onMessagesUpdate([...currentMessages, {
         from: "llm",
         text: data.outfit_description || "No outfit description available.",
         image: data.image_url || undefined,
         tips: data.styling_tips || undefined,
-        alternativePalette: data.alternative_palette || undefined
+        alternativePalette: data.alternative_palette || undefined,
+        measurements: data.measurements // Injectăm măsurătorile primite
       }])
 
     } catch (err) {
       console.error("❌ API Error:", err)
-
-      let errorMessage = "Failed to generate outfit."
-
-      if (err instanceof TypeError && err.message.includes("fetch")) {
-        errorMessage = `❌ Cannot connect to backend server.
-
-🔧 Troubleshooting:
-1. Is the backend running? Start it with:
-   cd backend && python main.py
-
-2. Check it's running at: http://127.0.0.1:8000
-   
-3. Make sure your .env file has:
-   OPENAI_API_KEY=your_key_here
-   TOGETHER_API_KEY=your_key_here (optional)
-
-4. Check for CORS errors in browser console.`
-      } else if (err instanceof Error) {
-        errorMessage = `❌ Error: ${err.message}`
-      }
-
-      onMessagesUpdate([...updatedMessages, {
+      onMessagesUpdate([...currentMessages, {
         from: "llm",
-        text: errorMessage
+        text: "❌ Failed to generate outfit. Please check if the backend is running."
       }])
     } finally {
       setLoading(false)
@@ -153,20 +130,15 @@ export default function ChatWindow({
               <div
                 className="mt-3 rounded-xl overflow-hidden border border-white/10 cursor-pointer hover:opacity-80 transition-all w-full max-w-[320px] shadow-xl"
                 onClick={() => window.open(msg.image, "_blank")}
-                title="Click to view full size"
               >
-                <img
-                  src={msg.image}
-                  alt="Generated Outfit"
-                  className="w-full h-auto block"
-                />
+                <img src={msg.image} alt="Generated Outfit" className="w-full h-auto block" />
               </div>
             )}
 
             {/* Styling Tips */}
             {msg.tips && (
               <div className="mt-3 px-4 py-3 rounded-xl bg-purple-500/10 border border-purple-400/20 max-w-[90%]">
-                <div className="text-xs font-semibold text-purple-300 mb-1">STYLING TIPS</div>
+                <div className="text-xs font-semibold text-purple-300 mb-1 tracking-wider">STYLING TIPS</div>
                 <div className="text-sm text-gray-200 leading-relaxed">{msg.tips}</div>
               </div>
             )}
@@ -174,8 +146,24 @@ export default function ChatWindow({
             {/* Alternative Color Palette */}
             {msg.alternativePalette && (
               <div className="mt-2 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-400/20 max-w-[90%]">
-                <div className="text-xs font-semibold text-blue-300 mb-1">ALTERNATIVE COLORS</div>
+                <div className="text-xs font-semibold text-blue-300 mb-1 tracking-wider">ALTERNATIVE COLORS</div>
                 <div className="text-sm text-gray-200">{msg.alternativePalette}</div>
+              </div>
+            )}
+
+            {/* BODY MEASUREMENTS - AFIȘATE SUB CULORI */}
+            {msg.from === "llm" && msg.measurements && (
+              <div className="mt-2 px-4 py-3 rounded-xl bg-green-500/10 border border-green-400/20 max-w-[90%] w-full">
+                <div className="text-xs font-semibold text-green-300 mb-2 tracking-wider">BODY DIMENSIONS</div>
+                <div className="text-[11px] text-gray-300 grid grid-cols-2 gap-x-4 gap-y-1 font-mono uppercase">
+                  <span>Chest: {msg.measurements.chest_circumference}cm</span>
+                  <span>Waist: {msg.measurements.waist_circumference}cm</span>
+                  <span>Hips: {msg.measurements.hip_circumference}cm</span>
+                  <span>Arm Length: {msg.measurements.arm_length}cm</span>
+                  <span>Leg Length: {msg.measurements.leg_length}cm</span>
+                  <span>Ratio: {msg.measurements.shoulder_hip_ratio}</span>
+                  <span className="col-span-2 text-green-200/50 mt-1 border-t border-green-400/10 pt-1">BMI: {msg.measurements.bmi}</span>
+                </div>
               </div>
             )}
           </div>
@@ -186,7 +174,7 @@ export default function ChatWindow({
             <div className="px-4 py-3 rounded-2xl bg-white/5 border border-white/5 text-gray-400">
               <div className="flex items-center gap-2">
                 <div className="animate-spin h-4 w-4 border-2 border-purple-400 border-t-transparent rounded-full"></div>
-                <span>Generating your outfit...</span>
+                <span>Tailoring your look...</span>
               </div>
             </div>
           </div>
@@ -200,7 +188,7 @@ export default function ChatWindow({
         <textarea
           className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-3 resize-none outline-none placeholder:text-gray-500"
           rows={1}
-          placeholder={loading ? "Generating outfit..." : "e.g., male, 180, 70, 30, 43, nike, style: casual with loose pants"}
+          placeholder={loading ? "Generating..." : "male, 178, 80, 26, 43, zara massimo-dutti, style: elegant..."}
           value={input}
           disabled={loading}
           onChange={(e) => setInput(e.target.value)}
@@ -220,14 +208,10 @@ export default function ChatWindow({
         </button>
       </div>
 
-      {/* Help Text with Book Icon Guide Link */}
-      <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+      <div className="mt-2 flex items-center justify-between text-xs text-gray-500 px-1">
         <span>Format: sex, height, weight, age, shoe, brands, style: description</span>
         {onOpenGuide && (
-          <button
-            onClick={onOpenGuide}
-            className="flex items-center gap-1 hover:text-gray-300 transition-colors"
-          >
+          <button onClick={onOpenGuide} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
             <BookOpen className="w-3.5 h-3.5" />
             <span>Style Guide</span>
           </button>

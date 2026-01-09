@@ -310,3 +310,22 @@ if __name__ == "__main__":
     print("=" * 70)
     print("✅ All tests completed!")
     print("=" * 70)
+
+
+    # Adaugă aceste funcții la sfârșitul fișierului fit_rules.py
+
+    def get_age_styling_rules(age: int, style_vibe: str) -> str:
+        """Returnează reguli de stil în funcție de vârstă."""
+        if age < 25:
+            return "Focus pe siluete îndrăznețe, layering contemporan și accesorii de trend."
+        elif age < 45:
+            return "Accent pe materiale de calitate, proporții bine croite și palete de culori sofisticate."
+        else:
+            return "Focus pe eleganță atemporală, texturi premium și linii curate, structurate."
+
+
+    def get_accessories_rules(age: int, style_vibe: str) -> str:
+        """Returnează reguli pentru accesorii."""
+        if style_vibe == "elegant":
+            return "Ceas minimalist, curea din piele și batistă de buzunar opțională."
+        return "Accesorii practice: ochelari de soare premium sau un rucsac structurat."
