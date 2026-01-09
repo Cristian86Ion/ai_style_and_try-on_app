@@ -22,7 +22,6 @@ FIT_RULES = {
         },
         "notes": "Slim body type: regular fits work best. User can request oversized/slim for adjustments."
     },
-
     "athletic": {
         "pants": {
             "elegant": "regular-fit (regular upper leg, standard length)",
@@ -36,7 +35,6 @@ FIT_RULES = {
         },
         "notes": "Athletic build needs regular/loose fits. Casual=loose, Elegant=regular. Standard length pants."
     },
-
     "average": {
         "pants": {
             "elegant": "regular-fit (standard length)",
@@ -50,7 +48,6 @@ FIT_RULES = {
         },
         "notes": "Average build is versatile. Casual=loose, Elegant=regular. Standard length pants."
     },
-
     "muscular": {
         "pants": {
             "elegant": "straight-fit with room in thighs (standard length)",
@@ -64,7 +61,6 @@ FIT_RULES = {
         },
         "notes": "Muscular build needs room. Avoid tight pants. Regular tops with space for muscle mass."
     },
-
     "stocky": {
         "pants": {
             "elegant": "straight-fit (standard length)",
@@ -78,7 +74,6 @@ FIT_RULES = {
         },
         "notes": "Stocky build works best with straight/regular fits. Standard length pants."
     },
-
     "plus-size": {
         "pants": {
             "elegant": "straight-fit for comfort (standard length)",
@@ -161,171 +156,49 @@ TOP_CUTS = {
 # =============================================================================
 
 def get_fit_for_body_type(body_type: str, garment_type: str, style_vibe: str) -> str:
-    """
-    Get recommended fit based on body type, garment type, and style vibe.
-
-    Args:
-        body_type: slim, athletic, average, muscular, stocky, plus-size
-        garment_type: "pants" or "tops"
-        style_vibe: "elegant", "casual", or "smart-casual"
-
-    Returns:
-        Fit recommendation string
-    """
+    """Get recommended fit based on body type, garment type, and style vibe."""
     if body_type not in FIT_RULES:
         body_type = "average"
-
     if style_vibe not in ["elegant", "casual"]:
         style_vibe = "casual"
-
     rules = FIT_RULES[body_type]
-
-    if garment_type == "pants":
-        return rules["pants"][style_vibe]
-    else:
-        return rules["tops"][style_vibe]
+    return rules["pants"][style_vibe] if garment_type == "pants" else rules["tops"][style_vibe]
 
 
 def adjust_fit_size(base_fit: str, style_description: str, garment_type: str) -> str:
-    """
-    Adjusts fit based on user's explicit requests.
-
-    Rules:
-    - If user requests "oversized", make 30% larger
-    - If user requests "slim fit", convert to regular fit
-    - Otherwise keep base fit
-
-    Args:
-        base_fit: Base fit from FIT_RULES
-        style_description: User's style description
-        garment_type: "pants" or "tops"
-
-    Returns:
-        Adjusted fit string
-    """
+    """Adjusts fit based on user's explicit requests (oversized/slim)."""
     style_lower = style_description.lower()
-
-    # Check for oversized request
     oversized_keywords = ["oversized", "baggy", "loose", "relaxed fit", "big"]
     if garment_type == "tops" and any(word in style_lower for word in oversized_keywords):
         return "oversized (30% larger than standard)"
-
-    # Check for slim request - convert to regular
     slim_keywords = ["slim", "fitted", "tight", "skinny"]
     if any(word in style_lower for word in slim_keywords):
-        if garment_type == "pants":
-            return "regular-fit (slim requested, using regular for proper fit)"
-        else:
-            return "regular-fit (slim requested, using regular for proper fit)"
-
-    # Return base fit
+        return "regular-fit (slim requested, using regular for proper fit)"
     return base_fit
 
 
 def determine_style_vibe(style_description: str) -> str:
-    """
-    Determines if style is elegant/formal or casual.
-
-    Returns:
-        "elegant" or "casual"
-    """
+    """Determines if style is elegant/formal or casual."""
     style_lower = style_description.lower()
-
     elegant_keywords = ["elegant", "formal", "sophisticated", "professional", "business", "refined"]
     casual_keywords = ["casual", "comfortable", "relaxed", "streetwear", "laid-back"]
-
     elegant_count = sum(1 for kw in elegant_keywords if kw in style_lower)
     casual_count = sum(1 for kw in casual_keywords if kw in style_lower)
+    return "elegant" if elegant_count > casual_count else "casual"
 
-    if elegant_count > casual_count:
-        return "elegant"
+
+def get_age_styling_rules(age: int, style_vibe: str) -> str:
+    """Return styling rules based on age."""
+    if age < 25:
+        return "Focus on bold silhouettes, contemporary layering, and trendy accessories."
+    elif age < 45:
+        return "Emphasize quality materials, well-proportioned tailoring, and sophisticated color palettes."
     else:
-        return "casual"
+        return "Focus on timeless elegance, premium textures, and clean structured lines."
 
 
-# =============================================================================
-# TESTING
-# =============================================================================
-
-if __name__ == "__main__":
-    print("\n" + "=" * 70)
-    print("FIT RULES TESTING")
-    print("=" * 70 + "\n")
-
-    # Test base fit rules
-    test_cases = [
-        {"body_type": "slim", "style": "elegant", "garment": "pants"},
-        {"body_type": "slim", "style": "casual", "garment": "pants"},
-        {"body_type": "athletic", "style": "elegant", "garment": "pants"},
-        {"body_type": "athletic", "style": "casual", "garment": "pants"},
-        {"body_type": "average", "style": "elegant", "garment": "pants"},
-        {"body_type": "muscular", "style": "elegant", "garment": "tops"},
-        {"body_type": "athletic", "style": "casual", "garment": "tops"},
-    ]
-
-    for test in test_cases:
-        result = get_fit_for_body_type(
-            test["body_type"],
-            test["garment"],
-            test["style"]
-        )
-        print(f"{test['body_type']:12s} + {test['style']:8s} + {test['garment']:5s} → {result}")
-
-    print("\n" + "=" * 70)
-    print("FIT ADJUSTMENT TESTING")
-    print("=" * 70 + "\n")
-
-    # Test fit adjustments
-    adjustment_tests = [
-        {
-            "base_fit": "regular-fit",
-            "style": "oversized streetwear",
-            "garment": "tops",
-            "expected": "oversized"
-        },
-        {
-            "base_fit": "regular-fit",
-            "style": "slim fit elegant",
-            "garment": "pants",
-            "expected": "regular (slim→regular)"
-        },
-        {
-            "base_fit": "loose-fit",
-            "style": "casual comfortable",
-            "garment": "pants",
-            "expected": "loose-fit (unchanged)"
-        },
-    ]
-
-    for test in adjustment_tests:
-        result = adjust_fit_size(
-            test["base_fit"],
-            test["style"],
-            test["garment"]
-        )
-        print(f"Base: {test['base_fit']:20s} + Style: '{test['style']}'")
-        print(f"   → Result: {result}")
-        print(f"   Expected: {test['expected']}\n")
-
-    print("=" * 70)
-    print("✅ All tests completed!")
-    print("=" * 70)
-
-
-    # Adaugă aceste funcții la sfârșitul fișierului fit_rules.py
-
-    def get_age_styling_rules(age: int, style_vibe: str) -> str:
-        """Returnează reguli de stil în funcție de vârstă."""
-        if age < 25:
-            return "Focus pe siluete îndrăznețe, layering contemporan și accesorii de trend."
-        elif age < 45:
-            return "Accent pe materiale de calitate, proporții bine croite și palete de culori sofisticate."
-        else:
-            return "Focus pe eleganță atemporală, texturi premium și linii curate, structurate."
-
-
-    def get_accessories_rules(age: int, style_vibe: str) -> str:
-        """Returnează reguli pentru accesorii."""
-        if style_vibe == "elegant":
-            return "Ceas minimalist, curea din piele și batistă de buzunar opțională."
-        return "Accesorii practice: ochelari de soare premium sau un rucsac structurat."
+def get_accessories_rules(age: int, style_vibe: str) -> str:
+    """Return accessory rules based on age and style."""
+    if style_vibe == "elegant":
+        return "Minimalist watch, leather belt, optional pocket square."
+    return "Practical accessories: premium sunglasses or a structured backpack."
