@@ -1,0 +1,18 @@
+
+Connected to PostgreSQL successfully!
+2026-01-09 02:02:47.673111> Query DB trial run using gender = man and brand = zara
+Connected to PostgreSQL successfully!
+2026-01-09 02:04:47.647847> Query DB trial run using gender = man and brand = zara
+Connected to PostgreSQL successfully!
+2026-01-09 02:05:54.254717> Query DB trial run using gender = man and brand = zara
+Connected to PostgreSQL successfully!
+2026-01-09 02:08:07.576441> Query DB trial run using gender = man and brand = zara
+Connected to PostgreSQL successfully!
+2026-01-09 02:08:21.832029> Query DB trial run using gender = man and brand = zara
+2026-01-09 02:08:21.914014> Updated file.json
+2026-01-09 02:11:47.532806> Connected to PostgreSQL successfully!
+
+2026-01-09 02:11:47.543413> Query DB trial run using gender = man and brand = zara
+2026-01-09 02:11:47.611593> Updated file.json
+2026-01-09 02:11:47.612852> Close connection to PostgreSQL successfully!
+

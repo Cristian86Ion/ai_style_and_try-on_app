@@ -1,0 +1,321 @@
+[
+  {
+    "id": "zara_000",
+    "brand": "zara",
+    "category": "jacket",
+    "gender": "man",
+    "url": "www.zara.com/ro/en/80-down---20-feather-water-repellent-jacket-p03411510.html?v1=495716621&v2=2536906",
+    "colors": [
+      "black",
+      "dark_khaki",
+      "electric_blue",
+      "brown",
+      "red"
+    ],
+    "style": "casual",
+    "price_eur": 100.0
+  },
+  {
+    "id": "zara_001",
+    "brand": "zara",
+    "category": "jacket",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/water-repellent-hooded-puffer-jacket-p04302209.html?v1=495675073&v2=2536906",
+    "colors": [
+      "black",
+      "green"
+    ],
+    "style": "casual",
+    "price_eur": 60.0
+  },
+  {
+    "id": "zara_002",
+    "brand": "zara",
+    "category": "jacket",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/man-jackets-l640.html?v1=2536906",
+    "colors": [
+      "black"
+    ],
+    "style": "grunge",
+    "price_eur": 175.0
+  },
+  {
+    "id": "zara_003",
+    "brand": "zara",
+    "category": "jacket",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/washed-pocket-jacket-p07563236.html?v1=476417125&v2=2536906",
+    "colors": [
+      "blue"
+    ],
+    "style": "street",
+    "price_eur": 85.0
+  },
+  {
+    "id": "zara_004",
+    "brand": "zara",
+    "category": "jogger",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/relaxed-fit-jogger-trousers-p00761372.html?v1=502981446&v2=2432096",
+    "colors": [
+      "black",
+      "dark_anthracite",
+      "grey_marl"
+    ],
+    "style": "sporty",
+    "price_eur": 25.0
+  },
+  {
+    "id": "zara_005",
+    "brand": "zara",
+    "category": "trousers",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/straight-leg-leather-trousers-p05388485.html?v1=495684384&v2=2432096",
+    "colors": [
+      "black"
+    ],
+    "style": "grunge",
+    "price_eur": 90.0
+  },
+  {
+    "id": "zara_006",
+    "brand": "zara",
+    "category": "trousers",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/abstract-print-baggy-trousers-p05862329.html?v1=486307598&v2=2432096",
+    "colors": [
+      "camo"
+    ],
+    "style": "street",
+    "price_eur": 55.0
+  },
+  {
+    "id": "zara_007",
+    "brand": "zara",
+    "category": "trousers",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/pinstripe-pleated-trousers-p00706950.html?v1=497993608&v2=2432096",
+    "colors": [
+      "grey",
+      "black",
+      "navy_blue"
+    ],
+    "style": "smart",
+    "price_eur": 40.0
+  },
+  {
+    "id": "zara_008",
+    "brand": "zara",
+    "category": "t-shirt",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/basic-medium-weight-t-shirt-p01887470.html?v1=452717199&v2=2432042",
+    "colors": [
+      "black",
+      "white",
+      "light_sand",
+      "blue",
+      "dark_brown",
+      "striped",
+      "intense_red"
+    ],
+    "style": "casual",
+    "price_eur": 14.0
+  },
+  {
+    "id": "zara_009",
+    "brand": "zara",
+    "category": "tank_top",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/relaxed-fit-tank-t-shirt-p00722451.html?v1=454393307&v2=2432042",
+    "colors": [
+      "mink_brown",
+      "white",
+      "black",
+      "faded_sky_blue"
+    ],
+    "style": "sporty",
+    "price_eur": 18.0
+  },
+  {
+    "id": "zara_010",
+    "brand": "zara",
+    "category": "t-shirt",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/technical-structure-t-shirt-p04387402.html?v1=452708107&v2=2432042",
+    "colors": [
+      "navy_blue",
+      "green",
+      "black",
+      "light_mint_green"
+    ],
+    "style": "sporty",
+    "price_eur": 20.0
+  },
+  {
+    "id": "zara_011",
+    "brand": "zara",
+    "category": "sweatshirt",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/interlock-polo-sweatshirt-with-zip-p04092380.html?v1=495707412&v2=2432232",
+    "colors": [
+      "navy_blue",
+      "oyster_white",
+      "bluish",
+      "dark_green"
+    ],
+    "style": "smart",
+    "price_eur": 30.0
+  },
+  {
+    "id": "zara_012",
+    "brand": "zara",
+    "category": "hoodie",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/basic-hoodie-p00761370.html?v1=496783638&v2=2432232",
+    "colors": [
+      "dark_anthracite",
+      "grey_marl",
+      "black",
+      "pearl_grey",
+      "burgundy",
+      "light_blue",
+      "yellow"
+    ],
+    "style": "casual",
+    "price_eur": 30.0
+  },
+  {
+    "id": "zara_013",
+    "brand": "zara",
+    "category": "sweater",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/purl-knit-sweater-p03284331.html?v1=495716797&v2=2432265",
+    "colors": [
+      "chocolate",
+      "mink_marl",
+      "ecru",
+      "black",
+      "blue_marl",
+      "green"
+    ],
+    "style": "casual",
+    "price_eur": 32.0
+  },
+  {
+    "id": "zara_014",
+    "brand": "zara",
+    "category": "jumper",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/purl-knit-quarter-zip-jumper-p03284400.html?v1=505208156&v2=2432265",
+    "colors": [
+      "navy_blue",
+      "chocolate",
+      "ecru",
+      "grey_marl"
+    ],
+    "style": "smart",
+    "price_eur": 40.0
+  },
+  {
+    "id": "zara_015",
+    "brand": "zara",
+    "category": "blazer",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/tuxedo-blazer-p01564329.html?v1=488337934&v2=2436311",
+    "colors": [
+      "ecru"
+    ],
+    "style": "classy",
+    "price_eur": 100.0
+  },
+  {
+    "id": "zara_016",
+    "brand": "zara",
+    "category": "blazer",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/relaxed-fit-leather-blazer-p05388240.html?v1=477256754&v2=2436311",
+    "colors": [
+      "black"
+    ],
+    "style": "grunge",
+    "price_eur": 1000.0
+  },
+  {
+    "id": "zara_017",
+    "brand": "zara",
+    "category": "blazer",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/check-suit-blazer-harry-lambert-for-zara-x-disney-p06378601.html?v1=478286528&v2=2436311",
+    "colors": [
+      "grey"
+    ],
+    "style": "retro",
+    "price_eur": 120.0
+  },
+  {
+    "id": "zara_018",
+    "brand": "zara",
+    "category": "jacket",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/interlock-ribbed-jacket-p00526415.html?v1=495674977&v2=2432232",
+    "colors": [
+      "beige",
+      "black",
+      "navy_blue"
+    ],
+    "style": "casual",
+    "price_eur": 40.0
+  },
+  {
+    "id": "zara_019",
+    "brand": "zara",
+    "category": "hoodie",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/washed-printed-slogan-hoodie-p00962400.html?v1=495698406&v2=2432232",
+    "colors": [
+      "street"
+    ],
+    "style": "blue",
+    "price_eur": 34.0
+  },
+  {
+    "id": "zara_020",
+    "brand": "zara",
+    "category": "sweatshirt",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/combined-print-sweatshirt-p04374400.html?v1=495698400&v2=2432232",
+    "colors": [
+      "dark_anthracite"
+    ],
+    "style": "street",
+    "price_eur": 30.0
+  },
+  {
+    "id": "zara_021",
+    "brand": "zara",
+    "category": "sweatshirt",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/polartec--quarter-zip-sweatshirt-p04387321.html?v1=495694141&v2=2432232",
+    "colors": [
+      "camel",
+      "black"
+    ],
+    "style": "sporty",
+    "price_eur": 60.0
+  },
+  {
+    "id": "zara_022",
+    "brand": "zara",
+    "category": "sweatshirt",
+    "gender": "man",
+    "url": "https://www.zara.com/ro/en/aaron-levine-x-zara-quarter-zip-sweatshirt-with-tape-detail-p03443374.html?v1=504899182&v2=2432232",
+    "colors": [
+      "bluish",
+      "black",
+      "yellow"
+    ],
+    "style": "smart",
+    "price_eur": 40.0
+  }
+]
