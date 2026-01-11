@@ -1,6 +1,3 @@
-
-
-
 def create(filters):
     BASE_QUERY = "SELECT * FROM clothes"
     conditions = []

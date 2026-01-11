@@ -16,3 +16,81 @@ Connected to PostgreSQL successfully!
 2026-01-09 02:11:47.611593> Updated file.json
 2026-01-09 02:11:47.612852> Close connection to PostgreSQL successfully!
 
+2026-01-11 11:26:11.345294> Connected to PostgreSQL successfully!
+
+2026-01-11 11:26:11.353844> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:27:07.399542> Connected to PostgreSQL successfully!
+
+2026-01-11 11:27:07.402494> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:27:07.487303> Updated file.json
+2026-01-11 11:27:07.487881> Close connection to PostgreSQL successfully!
+
+2026-01-11 11:27:18.074206> Connected to PostgreSQL successfully!
+
+2026-01-11 11:27:18.076575> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:27:18.145204> Updated file.json
+2026-01-11 11:27:18.146858> Close connection to PostgreSQL successfully!
+
+2026-01-11 11:30:01.037750> Connected to PostgreSQL successfully!
+
+2026-01-11 11:30:01.053344> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:34:33.558327> Connected to PostgreSQL successfully!
+
+2026-01-11 11:34:33.561307> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:34:33.629712> Updated file.json
+2026-01-11 11:34:33.630464> Close connection to PostgreSQL successfully!
+
+2026-01-11 11:34:54.514043> Connected to PostgreSQL successfully!
+
+2026-01-11 11:34:54.516194> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:34:54.592134> Updated file.json
+2026-01-11 11:34:54.593484> Close connection to PostgreSQL successfully!
+
+2026-01-11 11:35:33.595604> Connected to PostgreSQL successfully!
+
+2026-01-11 11:35:33.600519> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:44:04.895823> Connected to PostgreSQL successfully!
+
+2026-01-11 11:44:04.901316> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:44:35.265173> Connected to PostgreSQL successfully!
+
+2026-01-11 11:44:35.269147> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:44:35.348167> Updated file.json
+2026-01-11 11:44:35.348721> Close connection to PostgreSQL successfully!
+
+2026-01-11 11:48:49.052526> Connected to PostgreSQL successfully!
+
+2026-01-11 11:48:49.055074> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:49:05.053451> Connected to PostgreSQL successfully!
+
+2026-01-11 11:49:05.056449> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:49:05.129091> Updated file.json
+2026-01-11 11:49:05.130154> Close connection to PostgreSQL successfully!
+
+2026-01-11 11:50:06.463817> Connected to PostgreSQL successfully!
+
+2026-01-11 11:50:06.469968> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:50:17.882837> Connected to PostgreSQL successfully!
+
+2026-01-11 11:50:17.887431> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:52:42.426144> Connected to PostgreSQL successfully!
+
+2026-01-11 11:52:42.428743> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:53:54.461743> Connected to PostgreSQL successfully!
+
+2026-01-11 11:53:54.463324> Query DB trial run using gender = man and brand = zara
+2026-01-11 11:53:54.538757> Updated file.json
+2026-01-11 11:53:54.539601> Close connection to PostgreSQL successfully!
+
+2026-01-11 12:00:55.812665> Connected to PostgreSQL successfully!
+
+2026-01-11 12:00:55.813171> Query DB trial run using gender = man and brand = zara
+2026-01-11 12:00:55.942632> Updated file.json
+2026-01-11 12:00:55.943438> Close connection to PostgreSQL successfully!
+
+2026-01-11 12:01:39.976644> Connected to PostgreSQL successfully!
+
+2026-01-11 12:01:39.977180> Query DB trial run using gender = man and brand = zara
+2026-01-11 12:01:40.091938> Updated file.json
+2026-01-11 12:01:40.092717> Close connection to PostgreSQL successfully!
+
