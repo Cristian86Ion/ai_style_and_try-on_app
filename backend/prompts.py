@@ -1,307 +1,440 @@
-
-from sanzo_wada_colors import get_two_color_palettes, format_color_palette_for_prompt, get_current_season
-from fit_rules import get_fit_for_body_type, determine_style_vibe
 from datetime import datetime
+from sanzo_wada_colors import get_current_season
+import re
+
 
 # =============================================================================
-# BODY TYPE VISUAL CORRELATION (Height + Weight + Body Type)
-# =============================================================================
-
-def get_body_visual_description(height: int, weight: int, body_type: str, sex: str) -> str:
-    """Generate precise body description based on measurements."""
-    bmi = weight / ((height / 100) ** 2)
-
-    base_descriptions = {
-        "slim": f"Lean {sex} frame ({height}cm, {weight}kg, BMI {bmi:.1f}). Narrow shoulders, minimal body fat, thin limbs.",
-        "average": f"Balanced {sex} build ({height}cm, {weight}kg, BMI {bmi:.1f}). Standard proportions, moderate frame.",
-        "athletic": f"Athletic {sex} build ({height}cm, {weight}kg, BMI {bmi:.1f}). Defined muscles, V-shaped torso, lean.",
-        "muscular": f"Muscular {sex} build ({height}cm, {weight}kg, BMI {bmi:.1f}). Broad shoulders, developed chest, thick limbs.",
-        "stocky": f"Stocky {sex} build ({height}cm, {weight}kg, BMI {bmi:.1f}). Solid frame, muscle with fat layer, broad torso.",
-        "plus-size": f"Plus-size {sex} ({height}cm, {weight}kg, BMI {bmi:.1f}). Fuller figure, soft contours."
-    }
-
-    description = base_descriptions.get(body_type, base_descriptions["average"])
-
-    # Add sex-specific fat distribution for plus-size
-    if body_type == "plus-size":
-        if sex == "female":
-            description += " Fat distributed in hips, thighs (thicker legs), and bust. Pear or hourglass shape."
-        else:
-            description += " Fat concentrated in stomach area (belly), chest, and face. Apple shape with protruding abdomen."
-
-    return description
-
-FIT_MULTIPLIERS = {
-    "slim": "1.7x larger",
-    "average": "1.8x larger",
-    "athletic": "1.8x larger",
-    "muscular": "1.9x larger",
-    "stocky": "2.5x larger",
-    "plus-size": "2.6x larger"
-}
-
-# =============================================================================
-# OUTFIT GENERATION PROMPT (Step 1)
-# =============================================================================
-
-OUTFIT_PROMPT = """Generate outfit with EXPLICIT colors.
-
-CLIENT: {age}yo {sex}, {height}cm, {weight}kg, {body_type}
-DATE: {date}
-SEASON: {season} ({season_name})
-STYLE: {style_description}
-BRANDS: {brands}
-
-COLORS (MANDATORY): {color_palette}
-BOTTOMS: Navy, Black, Charcoal, Khaki, Beige
-
-FIT: Bottoms={pants_fit}, Tops={tops_fit}, Size={fit_multiplier}
-
-FORMAT (4-6 sentences):
-1. TOP: "[COLOR] [fabric] [neckline type], relaxed"
-2. BOTTOMS: "[COLOR] [fabric] [type], full-length to shoes"
-3. FOOTWEAR: "[COLOR] [material] [shoe type]" (MANDATORY)
-4. {layering_instruction}
-5. ACCESSORIES: {accessories}
-
-{female_note}
-
-CRITICAL: Name EXACT color for EVERY item. Example: "Sky Blue cotton crewneck" NOT "light top".
-"""
-
-# =============================================================================
-# IMAGE COMPILER PROMPT (Step 2) - COST OPTIMIZED
-# =============================================================================
-
-IMAGE_COMPILER = """Convert to Flux prompt. Match outfit EXACTLY.
-
-INPUT:
-{sex}, {age}yo, {height}cm, {weight}kg, {body_type}
-Body: {body_visual}
-Outfit: {outfit_description}
-
-FLUX PROMPT:
-
-Professional fashion photo. Gray mannequin (#808080) FULLY CLOTHED, A-pose, front view.
-
-MANNEQUIN:
-- Featureless gray head/neck/hands (#808080) - smooth, NO face
-- {sex} {body_type} build, {height}cm
-- {body_shape_note}
-- Body 100% HIDDEN by clothing
-
-POSE:
-- Standing, frontal, arms 20° from sides
-- Hands OUTSIDE pockets, visible
-- Feet parallel, shoulder-width
-
-OUTFIT (EXACT):
-{outfit_description}
-
-FIT: {fit_multiplier} - loose draping, natural folds, deep shadows
-PANTS: Full-length covering ankles, stacking at shoes
-SHOES: Volumetric 3D {shoe_color} shoes, NO gray feet visible, thick soles (2-4cm)
-COLORS: Vibrant, saturated, match description exactly
-LIGHTING: Studio 3-point, soft shadows
-BACKGROUND: Light gray (RGB 220,220,220)
-
-CRITICAL:
-✓ Gray head/neck/hands visible
-✓ Body/arms/legs 100% hidden
-✓ Hands outside pockets
-✓ Shoes fully visible and colored
-✓ All garments present
-✓ Colors match exactly
-"""
-
-# =============================================================================
-# STYLING TIPS PROMPT (Step 3)
-# =============================================================================
-
-TIPS_PROMPT = """50-word max seasonal tip.
-
-SEASON: {season}
-CLIENT: {age}yo {sex}, {body_type}
-ALTERNATIVE: {alternative_palette}
-
-Include: fabrics, silhouettes, 3 colors. Professional. Max 50 words.
-"""
-
-# =============================================================================
-# HELPER FUNCTIONS
+# SEASON & STYLE DETECTION
 # =============================================================================
 
 def get_season_info() -> tuple:
-    """Get current season with full name."""
+    """Get current season code and name."""
     season = get_current_season()
-    season_name = "Fall/Winter" if season == "FW" else "Spring/Summer"
-    return season, season_name
+    return season, "Fall/Winter" if season == "FW" else "Spring/Summer"
 
-def get_layering_instruction(season: str, style_vibe: str) -> str:
-    """Layering rules based on season."""
-    if season == "FW":
-        if style_vibe == "elegant":
-            return "LAYER: \"[COLOR] [fabric] blazer/coat\" (MANDATORY for F/W)"
-        return "LAYER: \"[COLOR] [fabric] jacket\" (MANDATORY for F/W)"
-    return "OUTERWEAR: Optional light jacket if desired"
+def get_date_from_api(data: dict, field: str) -> datetime:
+    return datetime.fromisoformat(
+        data[field].replace("Z", "+00:00")
+    )
 
-def get_accessories(age: int, style_vibe: str) -> str:
-    """Age-appropriate accessories."""
-    if age < 20:
-        return "Watch, belt only" if style_vibe == "elegant" else "Minimal accessories"
-    return "Watch, belt, optional tie (if elegant)"
+def season_from_date(dt: datetime) -> str:
+    month = dt.month
+    return "FW" if month in (10, 11, 12, 1, 2, 3) else "SS"
 
-def get_body_shape_note(body_type: str, sex: str) -> str:
-    """Body shape notes for image generation."""
-    if body_type == "plus-size":
-        if sex == "female":
-            return "CRITICAL: Thicker legs (fat in thighs), wider hips, fuller figure"
-        else:
-            return "CRITICAL: Protruding stomach (belly fat), broader midsection, rounded torso"
-    return "Standard proportions for body type"
-
-def extract_shoe_color(outfit_description: str) -> str:
-    """Extract shoe color from outfit description for emphasis."""
-    # Look for shoe color mentions
-    words = outfit_description.lower().split()
-    common_shoes = ["sneakers", "boots", "loafers", "oxfords", "shoes"]
-
-    for i, word in enumerate(words):
-        if any(shoe in word for shoe in common_shoes):
-            # Get color word before shoe type
-            if i > 0:
-                return words[i-1].capitalize()
-
-    return "Black"  # Default
 
 # =============================================================================
-# PROMPT BUILDERS
+# STYLE KEYWORD EXTRACTION PROMPT
 # =============================================================================
 
-def build_outfit_generation_prompt(user_data: dict, measurements: dict) -> str:
-    """Build outfit prompt - optimized for low token count."""
+STYLE_KEYWORD_EXTRACTOR = """Extract semantic search keywords from user style description.
 
-    # Extract data
-    style_description = user_data.get("style_description", "casual")
-    body_type = user_data.get("body_type", "average")
-    height = user_data.get("height", 170)
-    weight = user_data.get("weight", 70)
-    sex = user_data.get("sex", "male")
-    age = user_data.get("age", 25)
-    brands = ", ".join(user_data.get("favorite_brands", [])) or "None"
+USER PROFILE:
+- Age: {age}
+- Gender: {sex}
+- Body Type: {body_type}
+- Height: {height}cm, Weight: {weight}kg
+- Season: {season_name}
+- Style Description: "{style_description}"
+- Favorite Brands: {brands}
 
-    # Date and season
-    date = datetime.now().strftime("%B %d, %Y")
+YOUR TASK:
+Extract 5-10 keywords for semantic clothing search. Include:
+1. Style keywords (casual, formal, streetwear, sporty, elegant, vintage, punk)
+2. Color preferences (black, navy, earth tones, bright, monochrome)
+3. Garment types (oversized, fitted, loose, cropped)
+4. Patterns (solid, stripes, graphic, minimal)
+5. Use datetime to generate correct clothing palette 
+
+OUTPUT FORMAT (JSON):
+{{
+  "style_keywords": ["keyword1", "keyword2", ...],
+  "color_preferences": ["color1", "color2", ...],
+  "fit_preferences": ["fit1", "fit2"],
+  "season_appropriate": ["seasonal_item1", "seasonal_item2"]
+}}
+
+RULES:
+- Be specific but flexible
+- Consider season ({season_name})
+- Match user's age/body type
+- If brands mentioned, prioritize those styles
+- Return ONLY valid JSON, no extra text"""
+
+
+# =============================================================================
+# DATABASE QUERY BUILDER
+# =============================================================================
+
+def build_semantic_filters(keywords: dict, user_data: dict, season: str) -> dict:
+    sex = user_data.get('sex', 'male')
+    gender_db = 'man' if sex == 'male' else 'woman'
+
+    style_map = {
+        'casual': 'casual',
+        'sporty': 'sporty',
+        'sport': 'sporty',
+        'athletic': 'sporty',
+        'formal': 'formal',
+        'elegant': 'formal',
+        'business': 'formal',
+        'streetwear': 'streetwear',
+        'street': 'streetwear',
+        'urban': 'streetwear'
+    }
+
+    style_keywords = keywords.get('style_keywords', [])
+    detected_style = 'casual'  # default
+
+    for kw in style_keywords:
+        kw_lower = kw.lower()
+        for key, value in style_map.items():
+            if key in kw_lower:
+                detected_style = value
+                break
+
+    color_prefs = keywords.get('color_preferences', [])
+    primary_color = color_prefs[0].lower() if color_prefs else 'black'
+
+    primary_color = primary_color.split()[0]  # "dark blue" -> "dark"
+
+    brands = user_data.get('favorite_brands', [])
+    brand = brands[0].lower().replace(' ', '_') if brands else None
+
+    filters = {
+        'gender': gender_db,
+        'style': detected_style,
+        'colors': primary_color
+    }
+
+    if brand:
+        filters['brand'] = brand
+
+    return filters
+
+# =============================================================================
+# 3D MANNEQUIN GENERATION PROMPT
+# =============================================================================
+
+MANNEQUIN_PROMPT = """Generate a neutral 3D human shape full body, from head to shoes for clothing overlay.
+
+BODY SPECIFICATIONS:
+- Gender: {sex_upper}
+- Height: {height}cm
+- Weight: {weight}kg
+- Body Type: {body_type}
+- BMI: {bmi:.1f}
+
+MEASUREMENTS:
+- Chest: {chest}cm
+- Waist: {waist}cm  
+- Hips: {hips}cm
+- Leg Length: {leg_length}cm
+
+REQUIREMENTS:
+1. **Featureless gray silhouette ** (RGB 180, 180, 180)
+2. **NO facial features** - smooth head and smooth face
+3. **A-pose**: arms 20° from body, legs parallel, NO hands in pocket
+4. **Full body visible**: head to shoes in frame
+5. **Studio lighting**: even, no harsh shadows
+6. **Clean background**: light gray seamless (RGB 220, 220, 220)
+7. **Frontal view**: straight-on camera angle
+8. **Professional product photography style**
+
+BODY PROPORTIONS ({sex_upper}):
+{body_description}
+
+{height_instruction}
+{body_type_instruction}
+
+POSE SPECIFICS:
+- Standing upright, neutral expression area (no features)
+- Hands visible, fingers slightly separated
+- Feet flat, shoulder-width apart
+- Torso straight, shoulders level
+
+RENDER QUALITY:
+- High-resolution 3D render
+- Smooth surface, subtle ambient occlusion
+- No clothing, no textures
+- Ready for garment overlay
+
+OUTPUT: Single full-body mannequin image, 768x1024px"""
+
+# =============================================================================
+# CLOTHING OVERLAY INSTRUCTION
+# =============================================================================
+
+CLOTHING_OVERLAY_PROMPT = """Overlay real product images onto 3D mannequin silhouette with natural fitting.
+
+BASE MANNEQUIN: {mannequin_description}
+
+SELECTED CLOTHING ITEMS:
+{clothing_items}
+
+OVERLAY INSTRUCTIONS:
+
+1. **TOP ({top_category})**:
+   - Product: {top_id} - {top_brand}
+   - Colors: {top_colors}
+   - Style: {top_style}
+   - Fit: Position on torso with natural draping
+   - Align shoulders, adjust for body width
+   - Show fabric texture and folds
+
+2. **PANTS ({pants_category})**:
+   - Product: {pants_id} - {pants_brand}
+   - Colors: {pants_colors}
+   - Style: {pants_style}
+   - Fit: Waist-to-ankle coverage
+   - Match leg width, natural stacking at shoes
+   - Preserve garment proportions
+
+3. **FOOTWEAR**:
+   - Product: {shoe_id} - {shoe_brand}
+   - Colors: {shoe_colors}
+   - Style: {shoe_style}
+   - Position: On feet, soles touching ground
+   - Maintain shoe silhouette
+
+4. **LAYER ({layer_category})** (if applicable):
+   - Product: {layer_id} - {layer_brand}
+   - Colors: {layer_colors}
+   - Style: {layer_style}
+   - Fit: Over top garment, natural layering
+   - Show depth and dimension
+
+RENDERING RULES:
+- Preserve original product colors/patterns
+- Natural lighting interaction
+- Realistic fabric draping (gravity + body shape)
+- No distortion of brand logos/graphics
+- Smooth garment edges, no clipping
+- Professional product photography quality
+
+COMPOSITION:
+- Full outfit visible head-to-toe
+- Maintain mannequin's neutral pose
+- Clean background (light gray)
+- Studio lighting setup
+
+OUTPUT: Composite image showing dressed mannequin, 768x1024px"""
+
+# =============================================================================
+# STYLING TIPS PROMPT
+# =============================================================================
+
+STYLING_TIPS_PROMPT = """Generate brief styling advice for selected outfit.
+
+CLIENT PROFILE:
+- Age: {age}, Gender: {sex}
+- Body Type: {body_type}
+- Season: {season_name}
+
+SELECTED OUTFIT:
+- Top: {top_brand} {top_category} ({top_colors})
+- Pants: {pants_brand} {pants_category} ({pants_colors})
+- Shoes: {shoe_brand} ({shoe_colors})
+- Layer: {layer_info}
+
+TASK: Provide 2-3 concise styling tips (max 50 words total).
+
+Consider:
+- How to accessorize this outfit
+- Best occasions for this style
+- Seasonal adjustments
+- Color coordination advice
+
+Be specific, practical, and encouraging. Focus on making the outfit work for the client."""
+
+
+# =============================================================================
+# BODY DESCRIPTION HELPERS
+# =============================================================================
+
+def get_body_description(height: int, weight: int, body_type: str, sex: str, measurements: dict) -> str:
+    """Generate accurate body description for mannequin generation."""
+
+    bmi = measurements.get('bmi', weight / ((height / 100) ** 2))
+    chest = measurements.get('chest_circumference', 90)
+    waist = measurements.get('waist_circumference', 80)
+    hips = measurements.get('hip_circumference', 95)
+    leg_length = measurements.get('leg_length', height * 0.52)
+
+    sex_traits = (
+        "FEMALE anatomy: narrower shoulders, wider hips, defined waist, feminine curves"
+        if sex == "female" else
+        "MALE anatomy: broader shoulders, narrower hips, straighter torso, masculine build"
+    )
+
+    body_map = {
+        "slim": f"Lean frame, minimal body fat. {sex_traits}",
+        "athletic": f"Toned, defined muscles. {sex_traits}",
+        "muscular": f"Well-developed musculature. {sex_traits}",
+        "average": f"Balanced proportions, moderate build. {sex_traits}",
+        "stocky": f"Solid build, some muscle mass. {sex_traits}",
+        "plus-size": f"Fuller figure, soft curves. {sex_traits}"
+    }
+
+    description = body_map.get(body_type, f"{sex_traits}")
+
+    return (f"{height}cm tall, {weight}kg, BMI {bmi:.1f}. "
+            f"{description} "
+            f"Chest {chest}cm, Waist {waist}cm, Hips {hips}cm.")
+
+
+def get_height_instruction(height: int) -> str:
+
+    if height < 165:
+        return "SHORT stature - compact torso and leg proportions"
+    elif height > 185:
+        return "TALL stature - elongated torso and legs"
+    return "AVERAGE height - standard proportions"
+
+
+def get_body_type_instruction(body_type: str, sex: str, weight: int) -> str:
+
+    instructions = {
+        "slim": f"Slender {sex.upper()} build, narrow frame",
+        "athletic": f"Athletic {sex.upper()} physique, toned muscles",
+        "muscular": f"Muscular {sex.upper()} build, developed muscles",
+        "average": f"Average {sex.upper()} build, balanced proportions",
+        "stocky": f"Stocky {sex.upper()} build, solid frame",
+        "plus-size": (
+            f"Plus-size FEMALE build, fuller curves, wider hips"
+            if sex == "female" else
+            f"Plus-size MALE build, rounder torso, fuller chest"
+        )
+    }
+
+    return instructions.get(body_type, f"{body_type.title()} {sex.upper()} build")
+
+
+# =============================================================================
+# MAIN PROMPT BUILDERS
+# =============================================================================
+
+def build_style_extraction_prompt(user_data: dict) -> str:
+
+    season, season_name = get_season_info()
+    brands = user_data.get('favorite_brands', [])
+    brands_str = ", ".join(brands) if brands else "None specified"
+
+    return STYLE_KEYWORD_EXTRACTOR.format(
+        age=user_data.get('age', 25),
+        sex=user_data.get('sex', 'male'),
+        body_type=user_data.get('body_type', 'average'),
+        height=user_data.get('height', 170),
+        weight=user_data.get('weight', 70),
+        season_name=season_name,
+        style_description=user_data.get('style_description', 'casual'),
+        brands=brands_str
+    )
+
+
+def build_mannequin_prompt(user_data: dict, measurements: dict) -> str:
+
+    sex = user_data.get('sex', 'male')
+    height = user_data.get('height', 170)
+    weight = user_data.get('weight', 70)
+    body_type = user_data.get('body_type', 'average')
+
+    body_desc = get_body_description(height, weight, body_type, sex, measurements)
+    height_inst = get_height_instruction(height)
+    body_inst = get_body_type_instruction(body_type, sex, weight)
+
+    return MANNEQUIN_PROMPT.format(
+        sex_upper=sex.upper(),
+        height=height,
+        weight=weight,
+        body_type=body_type,
+        bmi=measurements.get('bmi', 22),
+        chest=measurements.get('chest_circumference', 90),
+        waist=measurements.get('waist_circumference', 80),
+        hips=measurements.get('hip_circumference', 95),
+        leg_length=measurements.get('leg_length', height * 0.52),
+        body_description=body_desc,
+        height_instruction=height_inst,
+        body_type_instruction=body_inst
+    )
+
+
+def build_overlay_prompt(user_data: dict, measurements: dict, selected_items: dict) -> str:
+
+    sex = user_data.get('sex', 'male')
+    height = user_data.get('height', 170)
+    weight = user_data.get('weight', 70)
+    body_type = user_data.get('body_type', 'average')
+
+    mannequin_desc = f"{sex.upper()}, {height}cm, {weight}kg, {body_type} build"
+
+    # Format clothing items
+    top = selected_items.get('top', {})
+    pants = selected_items.get('pants', {})
+    shoe = selected_items.get('shoe', {})
+    layer = selected_items.get('layer', {})
+
+    clothing_items = f"""
+TOP: {top.get('brand', 'N/A')} {top.get('category', 'N/A')}
+PANTS: {pants.get('brand', 'N/A')} {pants.get('category', 'N/A')}
+SHOES: {shoe.get('brand', 'N/A')}
+LAYER: {layer.get('brand', 'N/A') if layer else 'None'}
+"""
+
+    return CLOTHING_OVERLAY_PROMPT.format(
+        mannequin_description=mannequin_desc,
+        clothing_items=clothing_items,
+        top_category=top.get('category', 'shirt'),
+        top_id=top.get('id', 'N/A'),
+        top_brand=top.get('brand', 'N/A'),
+        top_colors=', '.join(top.get('colors', ['N/A'])),
+        top_style=top.get('style', 'N/A'),
+        pants_category=pants.get('category', 'pants'),
+        pants_id=pants.get('id', 'N/A'),
+        pants_brand=pants.get('brand', 'N/A'),
+        pants_colors=', '.join(pants.get('colors', ['N/A'])),
+        pants_style=pants.get('style', 'N/A'),
+        shoe_id=shoe.get('id', 'N/A'),
+        shoe_brand=shoe.get('brand', 'N/A'),
+        shoe_colors=', '.join(shoe.get('colors', ['N/A'])),
+        shoe_style=shoe.get('style', 'N/A'),
+        layer_category=layer.get('category', 'N/A') if layer else 'N/A',
+        layer_id=layer.get('id', 'N/A') if layer else 'N/A',
+        layer_brand=layer.get('brand', 'N/A') if layer else 'N/A',
+        layer_colors=', '.join(layer.get('colors', ['N/A'])) if layer else 'N/A',
+        layer_style=layer.get('style', 'N/A') if layer else 'N/A'
+    )
+
+
+def build_styling_tips_prompt(user_data: dict, selected_items: dict) -> str:
+
     season, season_name = get_season_info()
 
-    # Style analysis
-    style_vibe = determine_style_vibe(style_description)
-    pants_fit = get_fit_for_body_type(body_type, "pants", style_vibe)
-    tops_fit = get_fit_for_body_type(body_type, "tops", style_vibe)
-    fit_multiplier = FIT_MULTIPLIERS.get(body_type, "1.8x larger")
+    top = selected_items.get('top', {})
+    pants = selected_items.get('pants', {})
+    shoe = selected_items.get('shoe', {})
+    layer = selected_items.get('layer')
 
-    # Colors
-    style_keywords = style_description.lower().split()[:5]
-    outfit_palette, _ = get_two_color_palettes(style_keywords)
-    color_palette_str = format_color_palette_for_prompt(outfit_palette, include_hex=False)
+    layer_info = (
+        f"{layer.get('brand', 'N/A')} {layer.get('category', 'N/A')}"
+        if layer else "None"
+    )
 
-    # Layering
-    layering_instruction = get_layering_instruction(season, style_vibe)
-
-    # Accessories
-    accessories = get_accessories(age, style_vibe)
-
-    # Female note
-    female_note = "FEMALE: Can use dresses, skirts, blouses, heels, flats" if sex == "female" else ""
-
-    return OUTFIT_PROMPT.format(
-        age=age,
-        sex=sex,
-        height=height,
-        weight=weight,
-        body_type=body_type,
-        date=date,
-        season=season,
+    return STYLING_TIPS_PROMPT.format(
+        age=user_data.get('age', 25),
+        sex=user_data.get('sex', 'male'),
+        body_type=user_data.get('body_type', 'average'),
         season_name=season_name,
-        style_description=style_description[:80],
-        brands=brands,
-        color_palette=color_palette_str,
-        pants_fit=pants_fit,
-        tops_fit=tops_fit,
-        fit_multiplier=fit_multiplier,
-        layering_instruction=layering_instruction,
-        accessories=accessories,
-        female_note=female_note
+        top_brand=top.get('brand', 'N/A'),
+        top_category=top.get('category', 'N/A'),
+        top_colors=', '.join(top.get('colors', ['N/A'])),
+        pants_brand=pants.get('brand', 'N/A'),
+        pants_category=pants.get('category', 'N/A'),
+        pants_colors=', '.join(pants.get('colors', ['N/A'])),
+        shoe_brand=shoe.get('brand', 'N/A'),
+        shoe_colors=', '.join(shoe.get('colors', ['N/A'])),
+        layer_info=layer_info
     )
 
-def build_image_prompt_compiler(user_data: dict, measurements: dict, outfit_description: str) -> str:
-    """Build image compiler - cost-optimized."""
-
-    sex = user_data.get("sex", "male")
-    age = user_data.get("age", 25)
-    height = user_data.get("height", 170)
-    weight = user_data.get("weight", 70)
-    body_type = user_data.get("body_type", "average")
-
-    # Body visual description
-    body_visual = get_body_visual_description(height, weight, body_type, sex)
-
-    # Body shape note for plus-size
-    body_shape_note = get_body_shape_note(body_type, sex)
-
-    # Fit multiplier
-    fit_multiplier = FIT_MULTIPLIERS.get(body_type, "1.8x larger")
-
-    # Extract shoe color
-    shoe_color = extract_shoe_color(outfit_description)
-
-    return IMAGE_COMPILER.format(
-        sex=sex,
-        age=age,
-        height=height,
-        weight=weight,
-        body_type=body_type,
-        body_visual=body_visual,
-        body_shape_note=body_shape_note,
-        outfit_description=outfit_description,
-        fit_multiplier=fit_multiplier,
-        shoe_color=shoe_color
-    )
-
-def build_styling_tips_prompt(user_data: dict, measurements: dict, outfit_description: str) -> str:
-    """Build styling tips - minimal tokens."""
-
-    style_keywords = user_data.get("style_description", "").lower().split()[:5]
-    _, alternative_palette = get_two_color_palettes(style_keywords)
-
-    season, _ = get_season_info()
-
-    alt_colors = alternative_palette.get("colors", [])
-    color_names = [c.split(" (#")[0] if " (#" in c else c for c in alt_colors]
-    alternative_palette_str = ", ".join(color_names[:3])
-
-    return TIPS_PROMPT.format(
-        season=season,
-        age=user_data.get("age", 25),
-        sex=user_data.get("sex", "male"),
-        body_type=user_data.get("body_type", "average"),
-        alternative_palette=alternative_palette_str
-    )
-
-def format_outfit_response(outfit_description: str, styling_tips: str, measurements: dict) -> str:
-    """Format final response."""
-    dims = [
-        f"Chest: {measurements.get('chest_circumference', 'N/A')}cm",
-        f"Waist: {measurements.get('waist_circumference', 'N/A')}cm",
-        f"Hips: {measurements.get('hip_circumference', 'N/A')}cm",
-        f"BMI: {measurements.get('bmi', 'N/A')}"
-    ]
-
-    return f"""{outfit_description}
-
-💡 Styling Tip: {styling_tips}
-
-📏 Measurements: {' | '.join(dims)}"""
 
 # =============================================================================
 # VALIDATION
@@ -309,21 +442,23 @@ def format_outfit_response(outfit_description: str, styling_tips: str, measureme
 
 VALID_BODY_TYPES = ["slim", "athletic", "average", "muscular", "stocky", "plus-size"]
 
+
 def validate_user_data(user_data: dict) -> bool:
-    """Validate user data."""
     required = ["sex", "age", "height", "weight", "body_type"]
 
     for field in required:
         if field not in user_data or user_data[field] is None:
-            raise ValueError(f"Missing field: {field}")
+            raise ValueError(f"Missing required field: {field}")
 
     if user_data["body_type"] not in VALID_BODY_TYPES:
         raise ValueError(f"Invalid body_type: {user_data['body_type']}")
 
     if not (10 < user_data["age"] < 100):
         raise ValueError(f"Invalid age: {user_data['age']}")
+
     if not (140 < user_data["height"] < 220):
         raise ValueError(f"Invalid height: {user_data['height']}")
+
     if not (40 < user_data["weight"] < 200):
         raise ValueError(f"Invalid weight: {user_data['weight']}")
 

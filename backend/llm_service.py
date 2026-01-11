@@ -1,7 +1,14 @@
+"""
+LLM Service for Semantic Search-Based Outfit Generation
+Pipeline: Style Extraction → DB Query → Mannequin → Clothing Overlay → Tips
+"""
+
 import os
+import json
 import requests
 from dotenv import load_dotenv
 from openai import OpenAI
+from random import shuffle
 
 load_dotenv()
 
@@ -10,66 +17,53 @@ TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
-# Token tracking
-total_input_tokens = 0
-total_output_tokens = 0
 
-
-def log_parser_output(user_message: str, parsed_data: dict):
-    """Log how input was parsed."""
-    print("\n" + "=" * 60)
-    print("📝 INPUT PARSER BREAKDOWN")
-    print("=" * 60)
-    print(f"RAW INPUT: {user_message}")
-    print("\nEXTRACTED DATA:")
-    print(f"  • Sex: {parsed_data.get('sex')}")
-    print(f"  • Height: {parsed_data.get('height')}cm")
-    print(f"  • Weight: {parsed_data.get('weight')}kg")
-    print(f"  • Age: {parsed_data.get('age')}yo")
-    print(f"  • Shoe Size: {parsed_data.get('shoe_size')} EU")
-    print(f"  • Body Type: {parsed_data.get('body_type')} (from frontend)")
-    print(f"  • Brands: {parsed_data.get('favorite_brands')}")
-    print(f"  • Style: {parsed_data.get('style_description')}")
-    print("=" * 60)
-
+# =============================================================================
+# PIPELINE ORCHESTRATOR
+# =============================================================================
 
 def generate_outfit_pipeline(user_data: dict) -> dict:
     """
-    THREE-STEP PIPELINE for GPT-5-mini with cost optimization.
-    1. GPT-5-mini: Generate outfit description
-    2. GPT-5-mini: Compile Flux prompt
-    3. Flux: Generate image
-    4. GPT-5-mini: Generate styling tips
+    Five-step pipeline for real clothing database outfit generation.
+
+    1. Extract style keywords (GPT)
+    2. Query database with semantic filters
+    3. Select outfit items (top/pants/shoe/layer)
+    4. Generate mannequin + overlay clothing (Flux)
+    5. Generate styling tips (GPT)
     """
-    global total_input_tokens, total_output_tokens
 
     if not openai_client:
         raise RuntimeError("OPENAI_API_KEY is missing")
 
     from body_measurements import compute_body_measurements
     from prompts import (
-        build_outfit_generation_prompt,
-        build_image_prompt_compiler,
+        build_style_extraction_prompt,
+        build_semantic_filters,
+        build_mannequin_prompt,
+        build_overlay_prompt,
         build_styling_tips_prompt,
-        format_outfit_response,
         validate_user_data
     )
+    from backend.database import dbread
+    from processor.clotheselector import select_outfit_items, validate_outfit, get_product_links
+    from processor.getimages import get as get_image
 
-    # Validate input
+
     print("\n" + "=" * 60)
-    print("🔍 VALIDATING USER DATA")
+    print("VALIDATING USER DATA")
     print("=" * 60)
 
     try:
         validate_user_data(user_data)
-        print("✅ Validation passed")
+        print("Validation passed")
     except ValueError as e:
-        print(f"❌ Validation Error: {e}")
+        print(f"Validation Error: {e}")
         raise
 
     # Calculate measurements
     print("\n" + "=" * 60)
-    print("📐 CALCULATING BODY MEASUREMENTS")
+    print("CALCULATING BODY MEASUREMENTS")
     print("=" * 60)
 
     measurements = compute_body_measurements(
@@ -78,106 +72,123 @@ def generate_outfit_pipeline(user_data: dict) -> dict:
         sex=user_data.get("sex", "male")
     )
 
-    print(f"✅ Measurements:")
+    print(f"Measurements:")
     print(f"   Chest: {measurements['chest_circumference']}cm")
     print(f"   Waist: {measurements['waist_circumference']}cm")
     print(f"   Hips: {measurements['hip_circumference']}cm")
-    print(f"   BMI: {measurements['bmi']}")
+    print(f"   Leg Length: {measurements['leg_length']}cm")
+    print(f"   BMI: {measurements['bmi']:.1f}")
 
-    # Show season detection
-    from prompts import get_season_info
-    from datetime import datetime
-
-    season, season_name = get_season_info()
-    print(f"\n📅 Date: {datetime.now().strftime('%B %d, %Y')}")
-    print(f"🌡️  Season Detected: {season_name} ({season})")
-
-    # STEP 1: Generate outfit description
+    # STEP 1: Extract style keywords
     print("\n" + "=" * 60)
-    print("👔 STEP 1: GENERATING OUTFIT DESCRIPTION (GPT-5-mini)")
+    print("STEP 1: EXTRACTING STYLE KEYWORDS (GPT)")
     print("=" * 60)
 
-    outfit_prompt = build_outfit_generation_prompt(user_data, measurements)
-    print(f"Prompt length: {len(outfit_prompt)} chars (~{len(outfit_prompt.split())} words)")
+    style_prompt = build_style_extraction_prompt(user_data)
+    style_keywords = extract_style_keywords(style_prompt)
 
-    outfit_description = generate_outfit_description(outfit_prompt)
+    print(f"Keywords extracted:")
+    print(f"   Style: {style_keywords.get('style_keywords', [])}")
+    print(f"   Colors: {style_keywords.get('color_preferences', [])}")
+    print(f"   Fit: {style_keywords.get('fit_preferences', [])}")
 
-    if not outfit_description or len(outfit_description.strip()) < 50:
-        raise ValueError("Outfit description is too short or empty")
+    # STEP 2: Query database
+    print("\n" + "=" * 60)
+    print("🗄STEP 2: QUERYING DATABASE")
+    print("=" * 60)
 
-    print(f"\n✅ Outfit Generated ({len(outfit_description)} chars):")
-    print(f"{outfit_description}")
+    filters = build_semantic_filters(style_keywords, user_data, "FW")
+    print(f"   Filters: {filters}")
 
-    # STEP 2: Generate image
+    db_results = dbread.query(filters)
+    print(f"Found {len(db_results)} items in database")
+
+    if len(db_results) == 0:
+        raise ValueError("No items found matching filters. Try different style/brand.")
+
+
+    shuffle(db_results)
+
+    print("\n" + "=" * 60)
+    print("STEP 3: SELECTING OUTFIT ITEMS")
+    print("=" * 60)
+
+    outfit = select_outfit_items(db_results)
+    is_valid, missing = validate_outfit(outfit)
+
+    if not is_valid:
+        raise ValueError(f"Incomplete outfit - missing: {', '.join(missing)}")
+
+    print(f"Outfit selected:")
+    print(f"   TOP: {outfit['top']['brand']} {outfit['top']['category']} - {outfit['top']['id']}")
+    print(f"   PANTS: {outfit['pants']['brand']} {outfit['pants']['category']} - {outfit['pants']['id']}")
+    print(f"   SHOE: {outfit['shoe']['brand']} - {outfit['shoe']['id']}")
+    if outfit.get('layer'):
+        print(f"   LAYER: {outfit['layer']['brand']} {outfit['layer']['category']} - {outfit['layer']['id']}")
+    else:
+        print(f"   LAYER: None")
+
+    product_links = get_product_links(outfit)
+
     image_url = None
     if TOGETHER_API_KEY:
         try:
             print("\n" + "=" * 60)
-            print("🖼️  STEP 2: COMPILING FLUX PROMPT (GPT-5-mini)")
+            print("🖼STEP 4: GENERATING MANNEQUIN + CLOTHING OVERLAY")
             print("=" * 60)
 
-            compiler_prompt = build_image_prompt_compiler(user_data, measurements, outfit_description)
-            print(f"Compiler prompt length: {len(compiler_prompt)} chars")
+            # First generate mannequin
+            mannequin_prompt = build_mannequin_prompt(user_data, measurements)
+            print(f"   Generating base mannequin...")
 
-            flux_prompt = compile_image_prompt(compiler_prompt)
+            # Then add clothing overlay instructions
+            overlay_prompt = build_overlay_prompt(user_data, measurements, outfit)
 
-            if not flux_prompt or len(flux_prompt.strip()) < 100:
-                raise ValueError("Flux prompt compilation failed")
+            # Combine prompts
+            full_prompt = f"{mannequin_prompt}\n\n{overlay_prompt}"
 
-            print(f"\n✅ Flux Prompt Compiled ({len(flux_prompt)} chars)")
+            print(f"   Prompt length: {len(full_prompt)} chars")
 
-            print("\n" + "=" * 60)
-            print("🎨 STEP 3: GENERATING IMAGE WITH FLUX")
-            print("=" * 60)
-
-            image_url = generate_outfit_image(flux_prompt)
+            image_url = generate_outfit_image(full_prompt)
 
             if image_url:
-                print(f"✅ Image Generated Successfully")
+                print(f"Image generated successfully")
                 print(f"   URL: {image_url[:60]}...")
             else:
-                print("⚠️  No image URL returned")
+                print("⚠No image URL returned")
 
         except Exception as e:
-            print(f"\n❌ Image generation failed: {e}")
+            print(f"Image generation failed: {e}")
             import traceback
             traceback.print_exc()
             image_url = None
     else:
-        print("\n⚠️  TOGETHER_API_KEY not found - skipping image generation")
+        print("\nTOGETHER_API_KEY not found - skipping image generation")
 
-    # STEP 3: Generate styling tips
     print("\n" + "=" * 60)
-    print("💡 STEP 4: GENERATING STYLING TIPS (GPT-5-mini)")
+    print("STEP 5: GENERATING STYLING TIPS (GPT)")
     print("=" * 60)
 
-    tips_prompt = build_styling_tips_prompt(user_data, measurements, outfit_description)
+    tips_prompt = build_styling_tips_prompt(user_data, outfit)
     styling_tips = generate_styling_tips(tips_prompt)
 
-    print(f"✅ Styling Tips ({len(styling_tips)} chars):")
+    print(f"Styling tips generated ({len(styling_tips)} chars)")
     print(f"   {styling_tips}")
 
-    # Format response
+
     print("\n" + "=" * 60)
-    print("📦 FORMATTING FINAL RESPONSE")
+    print("FINAL RESPONSE")
     print("=" * 60)
 
-    formatted_text = format_outfit_response(outfit_description, styling_tips, measurements)
+    outfit_description = format_outfit_description(outfit, product_links)
+    formatted_response = format_complete_response(
+        outfit_description,
+        styling_tips,
+        measurements,
+        product_links
+    )
 
-    # Cost summary
-    print("\n" + "=" * 60)
-    print("💰 TOKEN USAGE & COST ESTIMATE")
-    print("=" * 60)
-    print(f"Total Input Tokens:  ~{total_input_tokens:,}")
-    print(f"Total Output Tokens: ~{total_output_tokens:,}")
-    print(f"Image Generation:    1 image")
-    print(f"\nEstimated Cost:")
-    print(f"  GPT Input:   ${total_input_tokens * 0.00000025:.5f}")
-    print(f"  GPT Output:  ${total_output_tokens * 0.000002:.5f}")
-    print(f"  Flux Image:  $0.00200")
-    total_cost = (total_input_tokens * 0.00000025) + (total_output_tokens * 0.000002) + 0.002
-    print(f"  ─────────────────────")
-    print(f"  TOTAL:       ${total_cost:.5f}")
+    print(f"Response complete")
     print("=" * 60 + "\n")
 
     return {
@@ -185,80 +196,70 @@ def generate_outfit_pipeline(user_data: dict) -> dict:
         "image_url": image_url,
         "styling_tips": styling_tips,
         "measurements": measurements,
-        "formatted_response": formatted_text
+        "product_links": product_links,
+        "formatted_response": formatted_response,
+        "selected_items": outfit
     }
 
 
-def generate_outfit_description(prompt: str) -> str:
-    """STEP 1: Generate outfit description using GPT-5-mini."""
-    global total_input_tokens, total_output_tokens
+# =============================================================================
+# LLM FUNCTIONS
+# =============================================================================
+
+def extract_style_keywords(prompt: str) -> dict:
+    """
+    STEP 1: Use GPT to extract semantic style keywords.
+    Returns JSON dict with style_keywords, color_preferences, etc.
+    """
 
     try:
         response = openai_client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
-                    "content": "Professional fashion stylist. Generate detailed outfit with explicit colors, fabrics, and necklines."
+                    "content": "You are a fashion AI that extracts semantic keywords. Return ONLY valid JSON, no markdown, no extra text."
                 },
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            temperature=0.7
         )
 
-        # Track tokens
-        total_input_tokens += response.usage.prompt_tokens
-        total_output_tokens += response.usage.completion_tokens
+        content = response.choices[0].message.content.strip()
 
-        print(f"   Input tokens: {response.usage.prompt_tokens}")
-        print(f"   Output tokens: {response.usage.completion_tokens}")
+        # Remove markdown if present
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
 
-        content = response.choices[0].message.content
-        if not content:
-            raise ValueError("Empty response from GPT-5-mini")
+        keywords = json.loads(content)
 
-        return content.strip()
+        if not isinstance(keywords, dict):
+            raise ValueError("Response is not a dict")
 
+        return keywords
+
+    except json.JSONDecodeError as e:
+        print(f"JSON parse error: {e}")
+        print(f"   Raw response: {content}")
+        # Return defaults
+        return {
+            "style_keywords": ["casual"],
+            "color_preferences": ["black"],
+            "fit_preferences": ["regular"],
+            "season_appropriate": []
+        }
     except Exception as e:
-        print(f"❌ GPT-5-mini outfit error: {e}")
-        raise
-
-
-def compile_image_prompt(compiler_prompt: str) -> str:
-    """STEP 2: Compile Flux prompt using GPT-5-mini."""
-    global total_input_tokens, total_output_tokens
-
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Technical compiler. Fill template with data. DO NOT invent. Be literal."
-                },
-                {"role": "user", "content": compiler_prompt}
-            ]
-        )
-
-        # Track tokens
-        total_input_tokens += response.usage.prompt_tokens
-        total_output_tokens += response.usage.completion_tokens
-
-        print(f"   Input tokens: {response.usage.prompt_tokens}")
-        print(f"   Output tokens: {response.usage.completion_tokens}")
-
-        content = response.choices[0].message.content
-        if not content:
-            raise ValueError("Empty compiler response")
-
-        return content.strip()
-
-    except Exception as e:
-        print(f"❌ GPT-5-mini compiler error: {e}")
+        print(f"GPT keyword extraction error: {e}")
         raise
 
 
 def generate_outfit_image(prompt: str) -> str:
-    """STEP 3: Generate image using Flux."""
+    """
+    STEP 4: Generate mannequin + clothing overlay using Flux.
+    """
+
     try:
         print("   Sending request to Flux API...")
 
@@ -284,39 +285,34 @@ def generate_outfit_image(prompt: str) -> str:
         if "data" not in data or len(data["data"]) == 0:
             raise ValueError("No image data in response")
 
-        print("   ✅ Flux generation successful")
+        print("Flux generation successful")
         return data["data"][0]["url"]
 
     except requests.exceptions.Timeout:
-        print("   ❌ Flux API timeout (45s)")
+        print("Flux API timeout (45s)")
         raise
     except requests.exceptions.RequestException as e:
-        print(f"   ❌ Flux API error: {e}")
+        print(f"Flux API error: {e}")
         raise
 
 
 def generate_styling_tips(prompt: str) -> str:
-    """STEP 4: Generate styling tips using GPT-5-mini."""
-    global total_input_tokens, total_output_tokens
+    """
+    STEP 5: Generate styling tips using GPT.
+    """
 
     try:
         response = openai_client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
-                    "content": "Fashion stylist. Seasonal guidance. Concise. Max 50 words."
+                    "content": "Fashion stylist. Concise, practical advice. Max 50 words."
                 },
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            temperature=0.7
         )
-
-        # Track tokens
-        total_input_tokens += response.usage.prompt_tokens
-        total_output_tokens += response.usage.completion_tokens
-
-        print(f"   Input tokens: {response.usage.prompt_tokens}")
-        print(f"   Output tokens: {response.usage.completion_tokens}")
 
         content = response.choices[0].message.content
         if not content:
@@ -324,13 +320,106 @@ def generate_styling_tips(prompt: str) -> str:
 
         text = content.strip()
 
-        # Ensure 50 word limit
+        # Enforce 50 word limit
         words = text.split()
         if len(words) > 50:
-            text = " ".join(words[:50])
+            text = " ".join(words[:50]) + "..."
 
         return text
 
     except Exception as e:
-        print(f"❌ GPT-5-mini tips error: {e}")
+        print(f"GPT styling tips error: {e}")
         raise
+
+
+# =============================================================================
+# FORMATTING HELPERS
+# =============================================================================
+
+def format_outfit_description(outfit: dict, product_links: dict) -> str:
+    """Format outfit items into readable description."""
+
+    lines = []
+
+    top = outfit.get('top', {})
+    lines.append(
+        f"TOP: {top.get('brand', 'N/A').upper()} "
+        f"{top.get('category', 'N/A').replace('_', ' ').title()} - "
+        f"{', '.join(top.get('colors', ['N/A']))}"
+    )
+
+    pants = outfit.get('pants', {})
+    lines.append(
+        f"PANTS: {pants.get('brand', 'N/A').upper()} "
+        f"{pants.get('category', 'N/A').replace('_', ' ').title()} - "
+        f"{', '.join(pants.get('colors', ['N/A']))}"
+    )
+
+    shoe = outfit.get('shoe', {})
+    lines.append(
+        f"SHOE: {shoe.get('brand', 'N/A').upper()} - "
+        f"{', '.join(shoe.get('colors', ['N/A']))}"
+    )
+
+    layer = outfit.get('layer')
+    if layer:
+        lines.append(
+            f"LAYER: {layer.get('brand', 'N/A').upper()} "
+            f"{layer.get('category', 'N/A').replace('_', ' ').title()} - "
+            f"{', '.join(layer.get('colors', ['N/A']))}"
+        )
+
+    return "\n".join(lines)
+
+
+def format_complete_response(
+        outfit_description: str,
+        styling_tips: str,
+        measurements: dict,
+        product_links: dict
+) -> str:
+    """Format complete response with outfit + tips + links."""
+
+    parts = [
+        "=== YOUR OUTFIT ===",
+        outfit_description,
+        "",
+        "=== PRODUCT LINKS ===",
+        f"TOP: {product_links.get('top', 'N/A')}",
+        f"PANTS: {product_links.get('pants', 'N/A')}",
+        f"SHOE: {product_links.get('shoe', 'N/A')}",
+    ]
+
+    if product_links.get('layer'):
+        parts.append(f"LAYER: {product_links['layer']}")
+
+    parts.extend([
+        "",
+        "=== STYLING TIP ===",
+        styling_tips,
+        "",
+        "=== YOUR MEASUREMENTS ===",
+        f"Chest: {measurements.get('chest_circumference', 'N/A')}cm | "
+        f"Waist: {measurements.get('waist_circumference', 'N/A')}cm | "
+        f"Hips: {measurements.get('hip_circumference', 'N/A')}cm | "
+        f"BMI: {measurements.get('bmi', 'N/A'):.1f}"
+    ])
+
+    return "\n".join(parts)
+
+
+def log_parser_output(user_message: str, parsed_data: dict):
+
+    print("\n" + "=" * 60)
+    print("INPUT PARSER BREAKDOWN")
+    print("=" * 60)
+    print(f"RAW INPUT: {user_message}")
+    print("\nEXTRACTED DATA:")
+    print(f"  • Sex: {parsed_data.get('sex')}")
+    print(f"  • Height: {parsed_data.get('height')}cm")
+    print(f"  • Weight: {parsed_data.get('weight')}kg")
+    print(f"  • Age: {parsed_data.get('age')}yo")
+    print(f"  • Body Type: {parsed_data.get('body_type')}")
+    print(f"  • Brands: {parsed_data.get('favorite_brands')}")
+    print(f"  • Style: {parsed_data.get('style_description')}")
+    print("=" * 60)
