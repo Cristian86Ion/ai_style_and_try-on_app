@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import LiquidEther from "@/components/LiquidEther"
-import ChatWindow from "@/components/ChatWindow"
-import Header from "@/components/Header"
-import HistorySidebar from "@/components/HistorySidebar"
-import SettingsModal from "@/components/SettingsModal"
-import ProfileModal from "@/components/ProfileModal"
-import StyleGuide from "@/components/StyleGuide"
-import "@/components/LiquidEther.css"
+import LiquidEther from "@/frontend/LiquidEther"
+import ChatWindow from "@/frontend/ChatWindow"
+import Header from "@/frontend/Header"
+import HistorySidebar from "@/frontend/HistorySidebar"
+import SettingsModal from "@/frontend/SettingsModal"
+import ProfileModal from "@/frontend/ProfileModal"
+import StyleGuide from "@/frontend/StyleGuide"
+import "@/frontend/LiquidEther.css"
 
 interface Message {
   from: "user" | "llm"

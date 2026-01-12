@@ -1,0 +1,20 @@
+.liquid-ether-container {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 0; /* behind the UI */
+  pointer-events: none; /* let clicks pass through */
+}
+/* src/frontend/LiquidEther.css */
+
+/* Ensure the canvas fills parent */
+.liquid-ether-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none; /* allows clicks through canvas */
+}

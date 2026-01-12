@@ -2,5 +2,5 @@ import datetime
 
 def log(text):
     date_time = str(datetime.datetime.now())
-    with open("db_log.txt", "a") as f:
-        f.write(date_time + "> " + text + "\n")
+    with open("db.log.txt", "a") as f:
+        f.write(f"{date_time}> {str(text)}\n")

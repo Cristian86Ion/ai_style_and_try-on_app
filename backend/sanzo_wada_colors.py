@@ -1,8 +1,3 @@
-"""
-Enhanced Sanzo Wada color palettes - 30 total (15 FW + 15 SS).
-Improved diversity and keyword matching for better variety.
-"""
-
 from datetime import datetime
 from typing import List, Dict, Tuple
 import random
@@ -12,12 +7,12 @@ import random
 # =============================================================================
 
 def get_current_season() -> str:
-    """FW: Sep-Feb (months 9-12, 1-2), SS: Mar-Aug (months 3-8)"""
+    #FW: Sep-Feb (months 9-12, 1-2), SS: Mar-Aug (months 3-8)
     current_month = datetime.now().month
     return "FW" if (current_month >= 9 or current_month <= 2) else "SS"
 
 def get_seasonal_description() -> str:
-    """Returns styling guidance based on current season."""
+
     season = get_current_season()
     if season == "FW":
         return "Fall/Winter: Layering, rich textures (wool, cashmere, leather), deeper tones, structured silhouettes."
@@ -25,13 +20,11 @@ def get_seasonal_description() -> str:
         return "Spring/Summer: Breathable fabrics (linen, cotton, silk), lighter colors, relaxed fits, minimal layering."
 
 # =============================================================================
-# EXPANDED COLOR PALETTES - 30 TOTAL (15 FW + 15 SS)
+# COLOR PALETTES - 30 TOTAL (15 FW + 15 SS)
 # =============================================================================
 
 SANZO_WADA_PALETTES = {
-    # =========================================================================
     # FALL/WINTER PALETTES (15)
-    # =========================================================================
 
     "FW_CLASSIC_NOIR": {
         "name": "Classic Noir",
@@ -400,19 +393,19 @@ def format_color_palette_for_prompt(palette: dict, include_hex: bool = True) -> 
 
 if __name__ == "__main__":
     print("\n" + "=" * 70)
-    print("🎨 ENHANCED SANZO WADA COLOR PALETTES - 30 TOTAL")
+    print("SANZO WADA COLOR PALETTES - 30 TOTAL")
     print("=" * 70 + "\n")
 
     current_season = get_current_season()
     current_month = datetime.now().month
 
-    print(f"📅 Current: {datetime.now().strftime('%B %d, %Y')} (Month {current_month})")
-    print(f"🌍 Season: {'Fall/Winter (FW)' if current_season == 'FW' else 'Spring/Summer (SS)'}\n")
+    print(f"Current: {datetime.now().strftime('%B %d, %Y')} (Month {current_month})")
+    print(f"Season: {'Fall/Winter (FW)' if current_season == 'FW' else 'Spring/Summer (SS)'}\n")
 
     # Count palettes
     fw_count = len(get_palettes_for_season("FW"))
     ss_count = len(get_palettes_for_season("SS"))
-    print(f"📊 Total Palettes: {len(SANZO_WADA_PALETTES)}")
+    print(f"Total Palettes: {len(SANZO_WADA_PALETTES)}")
     print(f"   • Fall/Winter: {fw_count}")
     print(f"   • Spring/Summer: {ss_count}\n")
 
@@ -438,4 +431,4 @@ if __name__ == "__main__":
         primary, alternative = get_two_color_palettes(style)
         print(f"{i:2d}. Style: {', '.join(style):20s} → {primary['name']}")
 
-    print(f"\n✅ Diversity test complete - palettes should vary!")
+    print(f"\n Diversity test complete - palettes should vary!")

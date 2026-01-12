@@ -1,23 +1,11 @@
-# body_measurements.py
-"""
-Calculează măsurătorile corporale bazate pe înălțime, greutate și sex.
-Folosește formule antropometrice pentru a estima dimensiuni realistice.
-
-NU calculează body_type - acesta vine din frontend (ProfileModal.tsx dropdown).
-"""
-
-
 def compute_body_measurements(height: int, weight: int, sex: str) -> dict:
     """
-    Calculează măsurătorile corporale și ratios.
-
-    Args:
-        height: Înălțime în cm (ex: 173)
+    User input:
+        height: Înălțime în cm (ex: 180)
         weight: Greutate în kg (ex: 70)
         sex: 'male' sau 'female'
 
-    Returns:
-        Dict cu toate măsurătorile calculate:
+    Return:
         - chest_circumference (cm)
         - waist_circumference (cm)
         - hip_circumference (cm)
@@ -29,7 +17,7 @@ def compute_body_measurements(height: int, weight: int, sex: str) -> dict:
         - silhouette_gray (pentru mannequin)
     """
 
-    # BMI pentru referință
+    # BMI
     bmi = weight / ((height / 100) ** 2)
     if sex == 'male':
         chest = 50 + (height - 170) * 0.3 + (weight - 70) * 0.4 + (bmi - 22) * 2.0
@@ -46,20 +34,18 @@ def compute_body_measurements(height: int, weight: int, sex: str) -> dict:
     else:
         hips = 50 + (height - 160) * 0.25 + (weight - 60) * 0.45 + (bmi - 22) * 2.4
 
-    # Leg length (lungime picioare)
-    leg_length = height * 0.52  # ~52% din înălțime
+    # Leg length
+    leg_length = height * 0.52
 
-    # Arm length (lungime brațe)
-    arm_length = height * 0.38  # ~38% din înălțime
+    # Arm length
+    arm_length = height * 0.38
 
-    # Calculează ratios
-    shoulder_width = chest * 0.95  # Aproximare
+    # Compute ratios
+    shoulder_width = chest * 0.95
     shoulder_hip_ratio = round(shoulder_width / hips, 2)
     chest_waist_ratio = round(chest / waist, 2)
     leg_length_ratio = round(leg_length / height, 2)
 
-    # Silhouette gray level (pentru mannequin Flux)
-    # Mai înalt BMI = mai închis gray
     silhouette_gray = min(180, max(100, int(100 + (bmi - 22) * 10)))
 
     return {
