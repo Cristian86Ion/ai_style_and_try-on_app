@@ -443,7 +443,7 @@ def build_outfit_description(selected_items: dict, ai_shoe: dict = None) -> str:
     lines = []
     total = 0
 
-    icons = {'top': '👕', 'pants': '👖', 'layer': '🧥'}
+    icons = {'top': '', 'pants': '', 'layer': ''}
 
     for key in ['top', 'pants', 'layer']:
         item = selected_items.get(key)
@@ -455,7 +455,7 @@ def build_outfit_description(selected_items: dict, ai_shoe: dict = None) -> str:
             lines.append(
                 f"{icons[key]} {safe_get(item, 'brand').title()} {safe_get(item, 'category')} ({colors}) - €{price}")
             if url:
-                lines.append(f"   🔗 {url}")
+                lines.append(f"{url}")
 
             try:
                 total += float(price)
@@ -463,10 +463,10 @@ def build_outfit_description(selected_items: dict, ai_shoe: dict = None) -> str:
                 pass
 
     if ai_shoe:
-        lines.append(f"👟 {ai_shoe.get('description', 'Shoes')} (AI-styled)")
+        lines.append(f"{ai_shoe.get('description', 'Shoes')} (AI-styled)")
 
     if total > 0:
-        lines.append(f"\n💰 Total: €{total:.0f}")
+        lines.append(f"\nTotal: €{total:.0f}")
 
     return "\n".join(lines) if lines else "No items"
 

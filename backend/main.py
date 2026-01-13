@@ -91,8 +91,8 @@ class GenerateOutfitResponse(BaseModel):
 async def root():
     return {
         "status": "online",
-        "version": "5.0.0",
-        "model": "GPT-4o-mini + Flux",
+        "version": "1.0.0",
+        "model": "GPT-5-mini + Flux",
         "features": [
             "Real clothing from database",
             "AI-generated shoes (style-matched)",
@@ -109,7 +109,7 @@ async def health_check():
     """Health check with system status."""
     return {
         "status": "healthy",
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-mini",
         "api_keys": {
             "openai": "configured" if os.getenv("OPENAI_API_KEY") else "missing",
             "together": "configured" if os.getenv("TOGETHER_API_KEY") else "missing"
