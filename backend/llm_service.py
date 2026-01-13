@@ -32,7 +32,6 @@ def get_category(raw: str) -> str | None:
 
 
 # ITEM SELECTION
-
 def select_item(items: list, category: str, filters: dict) -> dict | None:
     gender = filters.get("gender", "man")
     style = filters.get("style", "casual")
